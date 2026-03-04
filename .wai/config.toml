@@ -1,0 +1,9 @@
+plugins = []
+
+[project]
+name = "khipu"
+version = "2026.2.1"
+description = ""
+tool_commit = "f190810"
+
+[llm]

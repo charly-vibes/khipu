@@ -1,0 +1,3 @@
+# Agent config projections — defines how configs are synced to tool-specific locations
+# Strategies: symlink, inline, reference
+projections: []

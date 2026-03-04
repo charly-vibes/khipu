@@ -1,0 +1,136 @@
+# khipu
+
+> Agent trace forensics & workflow crystallization.
+
+khipu reads what AI agents actually did across sessions and answers three questions:
+1. What workflows keep recurring?
+2. What patterns (good and bad) are emerging?
+3. What's stable enough to become a permanent rule?
+
+## Quick Start
+
+```bash
+uv tool install khipu
+khipu analyze ./traces/
+khipu analyze ./traces/ --emit claude_md >> CLAUDE.md
+cat session.jsonl | khipu analyze - --ingestor claude_code --emit json
+```
+
+## Interfaces
+
+**CLI** — universal, shell-scriptable:
+```bash
+khipu analyze <path>...            # analyze traces
+khipu analyze <path> --emit json   # machine-readable output
+khipu mcp                          # start MCP server
+khipu backends                     # list/validate backends
+khipu prompts                      # list analyzers
+khipu emitters                     # list output templates
+khipu init                         # scaffold .khipu/ config dir
+```
+
+**MCP Server** — for Claude, Cursor, VS Code, Windsurf, Copilot:
+```json
+{
+  "mcpServers": {
+    "khipu": { "command": "khipu", "args": ["mcp"] }
+  }
+}
+```
+
+MCP tools: `analyze_traces`, `get_crystallization_candidates`
+
+**Python Library**:
+```python
+from khipu import analyze, ingest, emit
+
+sessions = ingest("./traces/")
+result = analyze(sessions, analyzers=["patterns", "crystallize"])
+print(emit(result, template="markdown"))
+```
+
+## Pipeline
+
+```
+Traces → Ingest → Redact → Condense → Analyze → Emit
+```
+
+Each stage is configured with files, not compiled code.
+
+## Extensibility
+
+All extension points work by dropping files — no registration, no build step:
+
+| Extension | Location | Format |
+|-----------|----------|--------|
+| Ingestors | `.khipu/ingestors/` or `~/.config/khipu/ingestors/` | Python file |
+| Analyzers | `.khipu/prompts/` or `~/.config/khipu/prompts/` | Markdown with YAML frontmatter |
+| Emitters  | `.khipu/emitters/` or `~/.config/khipu/emitters/` | Jinja2 `.j2` template |
+| Backends  | `.khipu/backends/` or `~/.config/khipu/backends/` | TOML file |
+
+## Built-in Ingestors
+
+- `claude_code` — Claude Code JSONL session logs (`.jsonl`)
+- `aider` — Aider chat history (`.aider.chat.history.md`)
+- `generic` — Any markdown/text conversation (fallback)
+
+## Built-in Analyzers
+
+- `workflows` — Repeatable step sequences toward a goal
+- `patterns` — Conventions, anti-patterns, gotchas, decision-points
+- `crystallize` — Scores patterns for codification (depends on `patterns`)
+
+## Built-in Emitters
+
+- `markdown` — Human-readable report (default)
+- `json` — Machine-readable, pipe-friendly
+- `claude_md` — Guidance block for appending to CLAUDE.md
+
+## LLM Backends
+
+API mode (HTTP) or CLI mode (shell out to any command):
+
+```toml
+# .khipu/config.toml
+[llm]
+backend = "claude-api"
+model = "claude-sonnet-4-6"
+```
+
+Built-in backends: `claude-api`, `claude-cli`, `ollama`, `llm-cli`
+
+## Configuration
+
+```toml
+# .khipu/config.toml
+[llm]
+backend = "claude-api"
+model = "claude-sonnet-4-6"
+
+[security]
+redact = true   # strips API keys, tokens, connection strings before LLM
+
+[analysis]
+analyzers = ["workflows", "patterns", "crystallize"]
+
+[condensation]
+mode = "auto"   # auto | always | smart | never
+
+[output]
+default_emit = "markdown"
+```
+
+Config discovery: `.khipu/` > `~/.config/khipu/` > built-in defaults.
+
+## Installation
+
+```bash
+uv tool install khipu   # recommended
+pip install khipu
+```
+
+## Source
+
+- Repository: https://github.com/charly/khipu
+- Language: Python ≥ 3.11
+- Dependencies: typer, jinja2, httpx, mcp
