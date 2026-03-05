@@ -1,0 +1,9 @@
+[backend]
+id = "claude-cli"
+mode = "cli"
+context_limit = 180000
+
+[cli]
+command = "claude -p $prompt_file --output-format text"
+input = "file"
+output = "stdout"
