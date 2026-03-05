@@ -36,6 +36,11 @@ def main(
 @app.command()
 def analyze(
     path: str = typer.Argument(..., help="Path to trace file or directory."),
+    emit: str = typer.Option(
+        "markdown",
+        "--emit",
+        help="Output format: 'markdown' (default) or 'json'.",
+    ),
 ) -> None:
     """Analyze agent traces at PATH."""
     typer.echo(f"analyze: {path} (not yet implemented)")
