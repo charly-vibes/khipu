@@ -1,5 +1,6 @@
 """Tests for khipu.condense."""
 
+import json
 import pytest
 from datetime import datetime, timezone
 
@@ -24,6 +25,17 @@ def _fat_session(human: str = "h" * 200, agent: str = "a" * 200) -> Session:
             Exchange(role="agent", content=agent),
         ],
     )
+
+
+class TestTokenEstimate:
+    def test_returns_positive_int(self):
+        assert _token_estimate([_session("hello")]) > 0
+
+    def test_more_accurate_than_chars_over_4(self):
+        # Claude tokenizer averages ~3.5 chars/token; estimate should exceed chars//4
+        s = _session("word " * 200)
+        text = json.dumps([s.to_dict()])
+        assert _token_estimate([s]) > len(text) // 4
 
 
 class TestCondenseSession:

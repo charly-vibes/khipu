@@ -53,9 +53,9 @@ def condense_session(session: Session) -> Session:
 
 
 def _token_estimate(sessions: list[Session]) -> int:
-    """Rough token estimate: len(json_text) / 4."""
+    """Token estimate for Claude: ~3.5 chars/token (more accurate than 4 for Claude's tokenizer)."""
     text = json.dumps([s.to_dict() for s in sessions])
-    return len(text) // 4
+    return int(len(text) / 3.5)
 
 
 def condense_sessions(
