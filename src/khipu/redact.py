@@ -21,6 +21,7 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("postgres_url", re.compile(r"postgres(?:ql)?://[^\s'\"]+")),
     ("mongodb_url", re.compile(r"mongodb(?:\+srv)?://[^\s'\"]+")),
     ("redis_url", re.compile(r"redis://[^\s'\"]+")),
+    ("mysql_url", re.compile(r"mysql://[^\s'\"]+")),
     # Private keys (PEM blocks)
     ("private_key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----.*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----", re.DOTALL)),
     # Env var assignments with secrets

@@ -47,6 +47,10 @@ class TestRedactStr:
         result = redact_str("cache = redis://localhost:6379/0")
         assert "[REDACTED:redis_url]" in result
 
+    def test_mysql_url(self):
+        result = redact_str("db = mysql://user:pass@host:3306/mydb")
+        assert "[REDACTED:mysql_url]" in result
+
     def test_private_key_pem(self):
         pem = "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA\n-----END RSA PRIVATE KEY-----"
         result = redact_str(pem)
