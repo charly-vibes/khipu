@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
+
+_LARGE_FILE_THRESHOLD = 50 * 1024 * 1024  # 50 MB
 
 from khipu.model import Exchange, Session, ToolCall
 
@@ -24,6 +27,14 @@ def can_handle(path: Path) -> bool:
 
 
 def ingest(path: Path) -> list[Session]:
+    stat = path.stat()
+    if stat.st_size > _LARGE_FILE_THRESHOLD:
+        mb = stat.st_size / (1024 * 1024)
+        print(
+            f"WARNING: {path.name} is large ({mb:.0f} MB > 50 MB); ingestion may be slow",
+            file=sys.stderr,
+        )
+
     exchanges: list[Exchange] = []
     # Pair up tool_use with subsequent tool_result by tool_use_id
     pending: dict[str, ToolCall] = {}
@@ -116,6 +127,5 @@ def ingest(path: Path) -> list[Session]:
                 tc = ToolCall(tool="unknown", input=None, output=output, success=not is_error)
             exchanges.append(Exchange(role="tool", content="", tool_calls=[tc]))
 
-    ts_str = path.stat().st_mtime
-    timestamp = datetime.fromtimestamp(ts_str, tz=timezone.utc)
+    timestamp = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
     return [Session(source="claude-code", timestamp=timestamp, exchanges=exchanges)]

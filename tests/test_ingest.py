@@ -96,6 +96,16 @@ class TestClaudeCodeIngestor:
         sessions = claude_code.ingest(f)
         assert len(sessions) == 1
 
+    def test_large_file_warns(self, tmp_path, capsys):
+        from unittest.mock import patch
+        f = _write(tmp_path, "trace.jsonl", json.dumps({"role": "user", "type": "message", "content": "hi"}) + "\n")
+        stat_result = type("S", (), {"st_size": 55 * 1024 * 1024, "st_mtime": 0})()
+        with patch("pathlib.Path.stat", return_value=stat_result):
+            claude_code.ingest(f)
+        captured = capsys.readouterr()
+        assert "WARNING" in captured.err
+        assert "large" in captured.err.lower() or "50" in captured.err
+
 
 # ---------------------------------------------------------------------------
 # generic ingestor
