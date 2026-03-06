@@ -172,6 +172,9 @@ def _ingest_dir(
     for file in sorted(directory.rglob("*")):
         if not file.is_file():
             continue
+        # Skip files inside hidden directories (e.g. .git, .venv)
+        if any(part.startswith(".") for part in file.relative_to(directory).parts[:-1]):
+            continue
         mod = pick(file)
         if mod is None:
             continue

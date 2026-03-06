@@ -176,6 +176,14 @@ class TestIngestEngine:
         sessions = ingest(tmp_path)
         assert len(sessions) == 2
 
+    def test_hidden_directories_skipped(self, tmp_path):
+        hidden = tmp_path / ".git"
+        hidden.mkdir()
+        _write(hidden, "chat.md", "Human: hi\nAssistant: hello\n")
+        _write(tmp_path, "real.md", "Human: hey\nAssistant: sup\n")
+        sessions = ingest(tmp_path)
+        assert len(sessions) == 1
+
     def test_stdin_without_ingestor_raises(self, monkeypatch):
         import io
         monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(b"")))
