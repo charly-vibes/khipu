@@ -304,7 +304,7 @@ _RESULT_FIELD: dict[str, str] = {
 }
 
 
-def analyze(
+def analyze_sync(
     sessions: list[Session],
     *,
     analyzers: list[str] | None = None,
@@ -315,7 +315,7 @@ def analyze(
     sessions_skipped: int = 0,
     condensation_mode: str = "auto",
 ) -> AnalysisResult:
-    """Run the analysis pipeline on sessions."""
+    """Run the analysis pipeline on sessions (synchronous)."""
     if analyzers is None:
         analyzers = ["workflows", "patterns", "crystallize"]
 
@@ -438,3 +438,31 @@ def analyze(
         duration_ms=duration_ms,
     )
     return result
+
+
+async def analyze(
+    sessions: list[Session],
+    *,
+    analyzers: list[str] | None = None,
+    backend: str | None = None,
+    model: str | None = None,
+    condense: bool | None = None,
+    redact: bool = True,
+    sessions_skipped: int = 0,
+    condensation_mode: str = "auto",
+) -> AnalysisResult:
+    """Async wrapper around analyze_sync for use in async contexts."""
+    import asyncio
+    return await asyncio.get_event_loop().run_in_executor(
+        None,
+        lambda: analyze_sync(
+            sessions,
+            analyzers=analyzers,
+            backend=backend,
+            model=model,
+            condense=condense,
+            redact=redact,
+            sessions_skipped=sessions_skipped,
+            condensation_mode=condensation_mode,
+        ),
+    )

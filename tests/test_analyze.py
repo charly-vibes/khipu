@@ -15,7 +15,7 @@ from khipu.analyze import (
     BackendConfig,
     PromptSpec,
     ResultMetadata,
-    analyze,
+    analyze_sync as analyze,
     call_backend,
     discover_prompts,
     extract_json,

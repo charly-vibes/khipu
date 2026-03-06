@@ -7,7 +7,7 @@ import sys
 import typer
 
 from khipu import __version__
-from khipu.analyze import analyze as analyze_sessions
+from khipu.analyze import analyze_sync as analyze_sessions
 from khipu.emit import emit
 from khipu.ingest import ingest
 
