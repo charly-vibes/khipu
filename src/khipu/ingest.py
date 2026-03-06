@@ -62,8 +62,21 @@ def _discover(*, safe: bool = False) -> list[tuple[str, ModuleType]]:
                 try:
                     mod = _load_file(py_file)
                     modules.append((mod_id, mod))
+                except SyntaxError as exc:
+                    print(
+                        f"WARNING: syntax error in ingestor {py_file}: {exc}",
+                        file=sys.stderr,
+                    )
+                except ImportError as exc:
+                    print(
+                        f"WARNING: import error in ingestor {py_file}: {exc}",
+                        file=sys.stderr,
+                    )
                 except Exception as exc:  # noqa: BLE001
-                    print(f"WARNING: failed to load ingestor {py_file}: {exc}", file=sys.stderr)
+                    print(
+                        f"WARNING: unexpected {type(exc).__name__} loading ingestor {py_file}: {exc}",
+                        file=sys.stderr,
+                    )
 
     # Sort by PRIORITY descending (higher = checked first)
     modules.sort(key=lambda t: getattr(t[1], "PRIORITY", 0), reverse=True)
@@ -99,7 +112,13 @@ def _pick_ingestor(
         try:
             if mod.can_handle(path):
                 return mod
-        except Exception:  # noqa: BLE001
+        except OSError:
+            continue
+        except Exception as exc:  # noqa: BLE001
+            print(
+                f"WARNING: {_id}.can_handle({path.name}) raised {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
             continue
     return None
 

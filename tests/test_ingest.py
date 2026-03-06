@@ -219,3 +219,17 @@ class TestIngestEngine:
         # With safe=True, custom ingestor is ignored → no ingestor found
         with pytest.raises(ValueError, match="No ingestor found"):
             ingest(f, safe=True)
+
+    def test_broken_drop_in_warns(self, tmp_path, capsys, monkeypatch):
+        from khipu.ingest import _USER_DIRS
+        drop_in_dir = tmp_path / "ingestors"
+        drop_in_dir.mkdir()
+        (drop_in_dir / "broken.py").write_text("this is not valid python !!!@@@")
+        import sys
+        _ingest_mod = sys.modules["khipu.ingest"]
+        monkeypatch.setattr(_ingest_mod, "_USER_DIRS", [drop_in_dir])
+        # Discovery should not crash; broken module warned to stderr
+        _discover = _ingest_mod._discover
+        _discover()
+        captured = capsys.readouterr()
+        assert "broken" in captured.err.lower() or "broken.py" in captured.err
