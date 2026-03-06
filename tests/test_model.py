@@ -82,6 +82,13 @@ class TestSession:
         restored = Session.from_dict(d)
         assert restored.timestamp.tzinfo is not None
 
+    def test_naive_datetime_object_gets_utc(self):
+        naive_ts = datetime(2026, 3, 5)
+        d = {"source": "aider", "timestamp": naive_ts, "exchanges": [], "outcome": None}
+        restored = Session.from_dict(d)
+        assert restored.timestamp.tzinfo is not None
+        assert restored.timestamp > datetime(2026, 1, 1, tzinfo=timezone.utc)
+
     def test_no_outcome(self):
         s = make_session()
         assert s.outcome is None

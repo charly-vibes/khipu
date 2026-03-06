@@ -94,6 +94,8 @@ class Session:
                 timestamp = timestamp.replace(tzinfo=timezone.utc)
         else:
             timestamp = ts
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
         return cls(
             source=data["source"],
             timestamp=timestamp,
