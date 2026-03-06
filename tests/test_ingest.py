@@ -182,6 +182,13 @@ class TestIngestEngine:
         with pytest.raises(ValueError, match="Stdin input requires --ingestor"):
             ingest("-")
 
+    def test_stdin_as_path_object_without_ingestor_raises(self, monkeypatch):
+        import io
+        from pathlib import Path
+        monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(b"")))
+        with pytest.raises(ValueError, match="Stdin input requires --ingestor"):
+            ingest(Path("-"))
+
     def test_stdin_unknown_ingestor_raises(self, monkeypatch):
         import io
         monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(b"")))

@@ -104,7 +104,7 @@ def _builtin_prompts() -> dict[str, PromptSpec]:
     pkg = importlib.resources.files("khipu.prompts")
     for item in pkg.iterdir():  # type: ignore[attr-defined]
         if item.name.endswith(".md"):
-            path = Path(str(item))
+            path = Path(str(item))  # Traversable → Path (no __fspath__ on Traversable)
             spec = load_prompt(path)
             prompts[spec.id] = spec
     return prompts
@@ -222,7 +222,7 @@ class BackendConfig:
 
 def _builtin_backend(name: str) -> BackendConfig:
     pkg = importlib.resources.files("khipu.backends")
-    path = Path(str(pkg.joinpath(f"{name}.toml")))
+    path = Path(str(pkg.joinpath(f"{name}.toml")))  # Traversable → Path
     return _load_backend_toml(path)
 
 

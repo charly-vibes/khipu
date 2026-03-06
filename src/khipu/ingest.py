@@ -114,13 +114,14 @@ def ingest(
 
     Accepts a file path, directory (recursive), or "-" for stdin.
     """
-    p = Path(path) if path != "-" else None
+    is_stdin = str(path) == "-"
+    p = None if is_stdin else Path(path)
 
     modules = _discover(safe=safe)
     id_map = dict(modules)
 
     # Stdin
-    if path == "-":
+    if is_stdin:
         if ingestor is None:
             available = ", ".join(id_map)
             raise ValueError(
