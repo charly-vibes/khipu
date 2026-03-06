@@ -40,7 +40,7 @@ def main(
 
 @app.command()
 def analyze(
-    path: str = typer.Argument(..., help="Path to trace file, directory, or '-' for stdin."),
+    paths: list[str] = typer.Argument(..., help="Paths to trace files, directories, or '-' for stdin."),
     ingestor: str | None = typer.Option(
         None,
         "--ingestor",
@@ -66,15 +66,22 @@ def analyze(
         "--model",
         help="Model override passed to the backend.",
     ),
+    only: list[str] = typer.Option(
+        [],
+        "--only",
+        help="Run only these analyzer IDs (repeatable). Default: all.",
+    ),
 ) -> None:
-    """Analyze agent traces at PATH and print a report."""
+    """Analyze agent traces at one or more PATHs and print a report."""
     # --- Ingest ---
-    typer.echo(f"Ingesting {path} …", err=True)
-    try:
-        sessions = ingest(path, ingestor=ingestor)
-    except (ValueError, OSError) as exc:
-        typer.echo(f"Error: {exc}", err=True)
-        raise typer.Exit(code=1) from exc
+    sessions = []
+    for path in paths:
+        typer.echo(f"Ingesting {path} …", err=True)
+        try:
+            sessions.extend(ingest(path, ingestor=ingestor))
+        except (ValueError, OSError) as exc:
+            typer.echo(f"Error: {exc}", err=True)
+            raise typer.Exit(code=1) from exc
 
     if not sessions:
         typer.echo("Error: no sessions found. Check the path and ingestor.", err=True)
@@ -88,6 +95,7 @@ def analyze(
         backend=backend,
         model=model,
         redact=not no_redact,
+        analyzers=list(only) if only else None,
     )
 
     # --- Emit ---

@@ -112,3 +112,26 @@ class TestAnalyzeCommand:
         with patch("khipu.cli.ingest", side_effect=ValueError("no ingestor")):
             result = runner.invoke(app, ["analyze", str(tmp_path)])
         assert result.exit_code != 0
+
+    def test_multi_path_ingests_all(self, tmp_path: Path):
+        dir1 = tmp_path / "a"
+        dir2 = tmp_path / "b"
+        dir1.mkdir()
+        dir2.mkdir()
+        sessions = [_session()]
+        analysis = _result()
+        with patch("khipu.cli.ingest", return_value=sessions) as mock_ingest, \
+             patch("khipu.cli.analyze_sessions", return_value=analysis):
+            result = runner.invoke(app, ["analyze", str(dir1), str(dir2)])
+        assert result.exit_code == 0
+        assert mock_ingest.call_count == 2
+
+    def test_only_flag_filters_analyzers(self, tmp_path: Path):
+        sessions = [_session()]
+        analysis = _result()
+        with patch("khipu.cli.ingest", return_value=sessions), \
+             patch("khipu.cli.analyze_sessions", return_value=analysis) as mock_analyze:
+            result = runner.invoke(app, ["analyze", str(tmp_path), "--only", "workflows"])
+        assert result.exit_code == 0
+        _, kwargs = mock_analyze.call_args
+        assert kwargs.get("analyzers") == ["workflows"]
