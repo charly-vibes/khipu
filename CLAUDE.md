@@ -188,3 +188,7 @@ context before starting research or creating tickets.
 > check for known patterns. Do not rediscover what is already documented.
 <!-- WAI:REFLECT:REF:END -->
 
+## Development Conventions
+
+- **Run tests with**: `uv run pytest` (not `.venv/bin/pytest` or `python -m pytest`)
+

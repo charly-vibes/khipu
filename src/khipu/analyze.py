@@ -199,12 +199,11 @@ def extract_json(text: str) -> Any:
     )
     if start == -1:
         raise ValueError("No JSON array or object found in response")
-    # Strip postamble after last ] or }
-    end = max(text.rfind("]"), text.rfind("}"))
-    if end == -1:
-        raise ValueError("No closing bracket/brace found in response")
-    text = text[start : end + 1]
-    return json.loads(text)
+    try:
+        value, _ = json.JSONDecoder().raw_decode(text, start)
+        return value
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid JSON: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------

@@ -168,6 +168,10 @@ class TestExtractJson:
         with pytest.raises((ValueError, json.JSONDecodeError)):
             extract_json("[not valid json")
 
+    def test_multiple_json_blocks_returns_first(self):
+        text = '[{"a": 1}] some text [{"b": 2}]'
+        assert extract_json(text) == [{"a": 1}]
+
 
 # ---------------------------------------------------------------------------
 # Backend
