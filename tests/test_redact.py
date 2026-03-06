@@ -82,6 +82,18 @@ class TestRedactStr:
         result = redact_str("host 192.168.1.10")
         assert "[REDACTED:ip_address]" not in result
 
+    def test_ipv4_invalid_octet_not_redacted(self):
+        result = redact_str("bad 999.999.999.999")
+        assert "[REDACTED:ip_address]" not in result
+
+    def test_ipv6_public(self):
+        result = redact_str("server at 2001:0db8:85a3:0000:0000:8a2e:0370:7334")
+        assert "[REDACTED:ipv6_address]" in result
+
+    def test_ipv6_loopback_not_redacted(self):
+        result = redact_str("listening on ::1")
+        assert "[REDACTED:ipv6_address]" not in result
+
     def test_clean_text_unchanged(self):
         text = "just some normal text with no secrets"
         assert redact_str(text) == text

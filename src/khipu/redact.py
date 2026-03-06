@@ -30,8 +30,21 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("aws_secret", re.compile(r"(?i)aws_secret_access_key\s*[=:]\s*\S+")),
     # Email addresses
     ("email", re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b")),
-    # IPv4 addresses (non-loopback, non-private)
-    ("ip_address", re.compile(r"\b(?!(?:127\.|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)\d)(?:\d{1,3}\.){3}\d{1,3}\b")),
+    # IPv4 addresses (non-loopback, non-private); validates each octet 0-255
+    ("ip_address", re.compile(
+        r"\b(?!(?:127\.|10\.|192\.168\.|172\.(?:1[6-9]|2\d|3[01])\.)\d)"
+        r"(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b"
+    )),
+    # IPv6 addresses — full 8-group form (loopback ::1 excluded by requiring ≥2 groups)
+    ("ipv6_address", re.compile(
+        r"(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}"
+        r"|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}"
+        r"|[0-9a-fA-F]{1,4}:(?::[0-9a-fA-F]{1,4}){1,6}"
+    )),
 ]
 
 
