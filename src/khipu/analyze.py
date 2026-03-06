@@ -151,27 +151,39 @@ def discover_prompts(requested: list[str]) -> dict[str, PromptSpec]:
 
 
 def topo_sort(prompts: dict[str, PromptSpec]) -> list[str]:
-    """Return analyzer ids in topological order. Raises on cycles."""
+    """Return analyzer ids in dependency-first topological order.
+
+    Uses iterative DFS with two marker sets:
+    - ``visiting``: nodes currently on the DFS stack (grey). Seeing a grey node
+      means we have a back-edge → cycle detected.
+    - ``visited``:  nodes whose entire subtree is resolved (black). Safe to skip.
+
+    A node is appended to ``order`` only after all its dependencies are resolved,
+    guaranteeing that every dependency appears before the nodes that require it.
+
+    Raises ValueError on cycles or missing dependencies.
+    """
     order: list[str] = []
-    visited: set[str] = set()
-    visiting: set[str] = set()  # cycle detection
+    visited: set[str] = set()   # fully resolved (black nodes)
+    visiting: set[str] = set()  # on current DFS path (grey nodes) — cycle sentinel
 
     def visit(aid: str) -> None:
         if aid in visited:
-            return
+            return  # subtree already resolved; skip
         if aid in visiting:
+            # We reached this node again while still resolving it → cycle
             raise ValueError(f"Circular dependency detected involving analyzer '{aid}'")
-        visiting.add(aid)
+        visiting.add(aid)  # mark grey: entering DFS subtree
         spec = prompts[aid]
         for dep in spec.depends_on:
             if dep not in prompts:
                 raise ValueError(
                     f"Analyzer '{aid}' depends on '{dep}', but '{dep}' is not in the run set"
                 )
-            visit(dep)
-        visiting.remove(aid)
-        visited.add(aid)
-        order.append(aid)
+            visit(dep)  # recurse: resolve dependency first
+        visiting.remove(aid)  # DFS subtree done; un-grey
+        visited.add(aid)      # mark black: fully resolved
+        order.append(aid)     # append after all deps → correct topo order
 
     for aid in prompts:
         visit(aid)
