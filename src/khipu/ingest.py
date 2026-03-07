@@ -7,7 +7,7 @@ import re
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Protocol
+from typing import Protocol, cast
 
 from khipu.model import Session
 
@@ -37,7 +37,7 @@ def _load_file(path: Path) -> ModuleType:
     if spec is None or spec.loader is None:
         raise ImportError(f"Cannot load ingestor from {path}")
     mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    spec.loader.exec_module(mod)
     return mod
 
 
@@ -151,12 +151,13 @@ def ingest(
             raise ValueError(f"Unknown ingestor '{ingestor}'. Available: {', '.join(id_map)}")
         # Write stdin to a temp file so ingestors can use Path API
         import tempfile
+
         data = sys.stdin.buffer.read()
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as tmp:
             tmp.write(data)
             tmp_path = Path(tmp.name)
         try:
-            return id_map[ingestor].ingest(tmp_path)
+            return cast(_IngestorModule, id_map[ingestor]).ingest(tmp_path)
         finally:
             tmp_path.unlink(missing_ok=True)
 
@@ -166,19 +167,19 @@ def ingest(
     if ingestor is not None:
         if ingestor not in id_map:
             raise ValueError(f"Unknown ingestor '{ingestor}'. Available: {', '.join(id_map)}")
-        mod = id_map[ingestor]
+        forced_mod = cast(_IngestorModule, id_map[ingestor])
         if p.is_dir():
-            return _ingest_dir(p, lambda f: mod)
-        return mod.ingest(p)
+            return _ingest_dir(p, lambda f: forced_mod)
+        return forced_mod.ingest(p)
 
     # Auto-detect
     if p.is_dir():
         return _ingest_dir(p, lambda f: _pick_ingestor(f, modules))
 
-    mod = _pick_ingestor(p, modules)
-    if mod is None:
+    detected = _pick_ingestor(p, modules)
+    if detected is None:
         raise ValueError(f"No ingestor found for '{p}'. Try --ingestor <name>.")
-    return mod.ingest(p)
+    return cast(_IngestorModule, detected).ingest(p)
 
 
 def _ingest_dir(
@@ -187,6 +188,7 @@ def _ingest_dir(
 ) -> list[Session]:
     """Recursively ingest all parseable files in *directory*."""
     from collections.abc import Callable
+
     pick: Callable[[Path], ModuleType | None] = pick_fn  # type: ignore[assignment]
     sessions: list[Session] = []
     for file in sorted(directory.rglob("*")):

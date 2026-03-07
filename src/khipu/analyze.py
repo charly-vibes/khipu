@@ -85,7 +85,7 @@ def load_prompt(path: Path) -> PromptSpec:
     if not m:
         raise ValueError(f"Prompt file {path} is missing YAML frontmatter")
     fm = _parse_frontmatter(m.group(1))
-    body = text[m.end():].strip()
+    body = text[m.end() :].strip()
     depends_on = fm.get("depends_on", [])
     if isinstance(depends_on, str):
         depends_on = [depends_on] if depends_on else []
@@ -102,7 +102,7 @@ def load_prompt(path: Path) -> PromptSpec:
 def _builtin_prompts() -> dict[str, PromptSpec]:
     prompts: dict[str, PromptSpec] = {}
     pkg = importlib.resources.files("khipu.prompts")
-    for item in pkg.iterdir():  # type: ignore[attr-defined]
+    for item in pkg.iterdir():
         if item.name.endswith(".md"):
             path = Path(str(item))  # Traversable → Path (no __fspath__ on Traversable)
             spec = load_prompt(path)
@@ -137,11 +137,11 @@ def discover_prompts(requested: list[str]) -> dict[str, PromptSpec]:
         if aid in needed:
             continue
         needed.add(aid)
-        spec = all_prompts.get(aid)
-        if spec is None:
+        dep_spec = all_prompts.get(aid)
+        if dep_spec is None:
             available = ", ".join(sorted(all_prompts))
             raise ValueError(f"Unknown analyzer '{aid}'. Available: {available}")
-        queue.extend(spec.depends_on)
+        queue.extend(dep_spec.depends_on)
 
     return {aid: all_prompts[aid] for aid in needed}
 
@@ -165,7 +165,7 @@ def topo_sort(prompts: dict[str, PromptSpec]) -> list[str]:
     Raises ValueError on cycles or missing dependencies.
     """
     order: list[str] = []
-    visited: set[str] = set()   # fully resolved (black nodes)
+    visited: set[str] = set()  # fully resolved (black nodes)
     visiting: set[str] = set()  # on current DFS path (grey nodes) — cycle sentinel
 
     def visit(aid: str) -> None:
@@ -183,8 +183,8 @@ def topo_sort(prompts: dict[str, PromptSpec]) -> list[str]:
                 )
             visit(dep)  # recurse: resolve dependency first
         visiting.remove(aid)  # DFS subtree done; un-grey
-        visited.add(aid)      # mark black: fully resolved
-        order.append(aid)     # append after all deps → correct topo order
+        visited.add(aid)  # mark black: fully resolved
+        order.append(aid)  # append after all deps → correct topo order
 
     for aid in prompts:
         visit(aid)
@@ -222,6 +222,7 @@ def extract_json(text: str) -> Any:
 # ---------------------------------------------------------------------------
 # Backend loading and execution
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class BackendConfig:
@@ -284,9 +285,7 @@ def _run_cli_backend(backend: BackendConfig, prompt: str, model: str | None) -> 
         try:
             cmd = command.replace("$prompt_file", str(prompt_file))
             cmd = cmd.replace("$model", effective_model)
-            result = subprocess.run(
-                cmd, shell=True, capture_output=True, text=True, check=True
-            )
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
             return result.stdout
         finally:
             prompt_file.unlink(missing_ok=True)
@@ -337,6 +336,7 @@ def analyze_sync(
     # Redact
     if redact:
         from khipu.redact import redact_sessions
+
         sessions = redact_sessions(sessions)
 
     # Load backend
@@ -344,6 +344,7 @@ def analyze_sync(
 
     # Condense
     from khipu.condense import condense_sessions
+
     if condense is True:
         mode = "always"
     elif condense is False:
@@ -413,8 +414,7 @@ def analyze_sync(
             parsed = extract_json(raw)
         except (ValueError, json.JSONDecodeError):
             retry_prompt = (
-                prompt_text
-                + "\n\nYour previous response was not valid JSON. "
+                prompt_text + "\n\nYour previous response was not valid JSON. "
                 "Respond ONLY with the JSON array, nothing else."
             )
             try:
@@ -466,6 +466,7 @@ async def analyze(
 ) -> AnalysisResult:
     """Async wrapper around analyze_sync for use in async contexts."""
     import asyncio
+
     return await asyncio.get_event_loop().run_in_executor(
         None,
         lambda: analyze_sync(
