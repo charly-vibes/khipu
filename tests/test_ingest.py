@@ -11,7 +11,6 @@ import pytest
 from khipu.ingest import ingest
 from khipu.ingestors import claude_code, generic
 
-
 # ---------------------------------------------------------------------------
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
@@ -58,7 +57,10 @@ class TestClaudeCodeIngestor:
                 "role": "user",
                 "type": "message",
                 "content": [
-                    {"type": "tool_result", "tool_use_id": "t1", "content": "file.py", "is_error": False}
+                    {
+                        "type": "tool_result", "tool_use_id": "t1",
+                        "content": "file.py", "is_error": False,
+                    }
                 ],
             },
         ]
@@ -91,14 +93,19 @@ class TestClaudeCodeIngestor:
         assert sessions[0].exchanges[1].tool_calls[0].output == "content"
 
     def test_ingest_skips_invalid_json(self, tmp_path):
-        content = 'not-json\n' + json.dumps({"role": "user", "type": "message", "content": "hi"}) + "\n"
+        content = (
+            'not-json\n'
+            + json.dumps({"role": "user", "type": "message", "content": "hi"})
+            + "\n"
+        )
         f = _write(tmp_path, "trace.jsonl", content)
         sessions = claude_code.ingest(f)
         assert len(sessions) == 1
 
     def test_large_file_warns(self, tmp_path, capsys):
         from unittest.mock import patch
-        f = _write(tmp_path, "trace.jsonl", json.dumps({"role": "user", "type": "message", "content": "hi"}) + "\n")
+        payload = json.dumps({"role": "user", "type": "message", "content": "hi"}) + "\n"
+        f = _write(tmp_path, "trace.jsonl", payload)
         stat_result = type("S", (), {"st_size": 55 * 1024 * 1024, "st_mtime": 0})()
         with patch("pathlib.Path.stat", return_value=stat_result):
             claude_code.ingest(f)
@@ -231,7 +238,6 @@ class TestIngestEngine:
             ingest(f, safe=True)
 
     def test_broken_drop_in_warns(self, tmp_path, capsys, monkeypatch):
-        from khipu.ingest import _USER_DIRS
         drop_in_dir = tmp_path / "ingestors"
         drop_in_dir.mkdir()
         (drop_in_dir / "broken.py").write_text("this is not valid python !!!@@@")

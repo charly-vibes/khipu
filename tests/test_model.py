@@ -1,8 +1,6 @@
 """Tests for khipu.model dataclasses."""
 
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from khipu.model import Exchange, Outcome, Session, ToolCall
 
@@ -10,7 +8,7 @@ from khipu.model import Exchange, Outcome, Session, ToolCall
 def make_session(**kwargs) -> Session:
     defaults = dict(
         source="claude-code",
-        timestamp=datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 1, 1, 12, 0, tzinfo=UTC),
         exchanges=[Exchange(role="human", content="hello")],
     )
     defaults.update(kwargs)
@@ -87,7 +85,7 @@ class TestSession:
         d = {"source": "aider", "timestamp": naive_ts, "exchanges": [], "outcome": None}
         restored = Session.from_dict(d)
         assert restored.timestamp.tzinfo is not None
-        assert restored.timestamp > datetime(2026, 1, 1, tzinfo=timezone.utc)
+        assert restored.timestamp > datetime(2026, 1, 1, tzinfo=UTC)
 
     def test_no_outcome(self):
         s = make_session()

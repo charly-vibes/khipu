@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-
 import typer
 
 from khipu import __version__
@@ -40,7 +38,9 @@ def main(
 
 @app.command()
 def analyze(
-    paths: list[str] = typer.Argument(..., help="Paths to trace files, directories, or '-' for stdin."),
+    paths: list[str] = typer.Argument(  # noqa: B008
+        ..., help="Paths to trace files, directories, or '-' for stdin."
+    ),
     ingestor: str | None = typer.Option(
         None,
         "--ingestor",
@@ -66,7 +66,7 @@ def analyze(
         "--model",
         help="Model override passed to the backend.",
     ),
-    only: list[str] = typer.Option(
+    only: list[str] = typer.Option(  # noqa: B008
         [],
         "--only",
         help="Run only these analyzer IDs (repeatable). Default: all.",

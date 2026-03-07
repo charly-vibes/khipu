@@ -10,8 +10,8 @@ import sys
 import tempfile
 import time
 import tomllib
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -139,7 +139,8 @@ def discover_prompts(requested: list[str]) -> dict[str, PromptSpec]:
         needed.add(aid)
         spec = all_prompts.get(aid)
         if spec is None:
-            raise ValueError(f"Unknown analyzer '{aid}'. Available: {', '.join(sorted(all_prompts))}")
+            available = ", ".join(sorted(all_prompts))
+            raise ValueError(f"Unknown analyzer '{aid}'. Available: {available}")
         queue.extend(spec.depends_on)
 
     return {aid: all_prompts[aid] for aid in needed}
@@ -367,7 +368,7 @@ def analyze_sync(
     prompt_versions: dict[str, str] = {}
 
     result = AnalysisResult(
-        timestamp=datetime.now(tz=timezone.utc),
+        timestamp=datetime.now(tz=UTC),
         session_count=len(sessions),
         sessions_skipped=sessions_skipped,
     )

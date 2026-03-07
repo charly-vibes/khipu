@@ -1,17 +1,18 @@
 """Tests for khipu.condense."""
 
 import json
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
+import pytest
+
+from khipu.condense import _token_estimate, condense_session, condense_sessions
 from khipu.model import Exchange, Session, ToolCall
-from khipu.condense import condense_session, condense_sessions, _token_estimate
 
 
 def _session(content: str = "hello", *, source: str = "test") -> Session:
     return Session(
         source=source,
-        timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         exchanges=[Exchange(role="human", content=content)],
     )
 
@@ -19,7 +20,7 @@ def _session(content: str = "hello", *, source: str = "test") -> Session:
 def _fat_session(human: str = "h" * 200, agent: str = "a" * 200) -> Session:
     return Session(
         source="test",
-        timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         exchanges=[
             Exchange(role="human", content=human),
             Exchange(role="agent", content=agent),
@@ -57,7 +58,7 @@ class TestCondenseSession:
         tc = ToolCall(tool="Read", input={"path": "/foo.py"}, output="x" * 1000, success=True)
         session = Session(
             source="test",
-            timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             exchanges=[Exchange(role="agent", content="ok", tool_calls=[tc])],
         )
         result = condense_session(session)
@@ -71,7 +72,7 @@ class TestCondenseSession:
         tc = ToolCall(tool="Bash", input={"cmd": "echo hi"}, output="hi", success=True)
         session = Session(
             source="test",
-            timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+            timestamp=datetime(2026, 1, 1, tzinfo=UTC),
             exchanges=[Exchange(role="agent", content="ok", tool_calls=[tc])],
         )
         result = condense_session(session)

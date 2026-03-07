@@ -74,7 +74,8 @@ def _discover(*, safe: bool = False) -> list[tuple[str, ModuleType]]:
                     )
                 except Exception as exc:  # noqa: BLE001
                     print(
-                        f"WARNING: unexpected {type(exc).__name__} loading ingestor {py_file}: {exc}",
+                        f"WARNING: unexpected {type(exc).__name__} "
+                        f"loading ingestor {py_file}: {exc}",
                         file=sys.stderr,
                     )
 
@@ -185,7 +186,7 @@ def _ingest_dir(
     pick_fn: object,
 ) -> list[Session]:
     """Recursively ingest all parseable files in *directory*."""
-    from typing import Callable
+    from collections.abc import Callable
     pick: Callable[[Path], ModuleType | None] = pick_fn  # type: ignore[assignment]
     sessions: list[Session] = []
     for file in sorted(directory.rglob("*")):

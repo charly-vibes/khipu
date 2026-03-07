@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -18,7 +18,7 @@ class ToolCall:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ToolCall":
+    def from_dict(cls, data: dict[str, Any]) -> ToolCall:
         return cls(
             tool=data["tool"],
             input=data["input"],
@@ -41,7 +41,7 @@ class Exchange:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Exchange":
+    def from_dict(cls, data: dict[str, Any]) -> Exchange:
         tool_calls = None
         if data.get("tool_calls"):
             tool_calls = [ToolCall.from_dict(tc) for tc in data["tool_calls"]]
@@ -62,7 +62,7 @@ class Outcome:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Outcome":
+    def from_dict(cls, data: dict[str, Any]) -> Outcome:
         return cls(
             success=data["success"],
             artifacts_produced=data.get("artifacts_produced", []),
@@ -86,16 +86,16 @@ class Session:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Session":
+    def from_dict(cls, data: dict[str, Any]) -> Session:
         ts = data["timestamp"]
         if isinstance(ts, str):
             timestamp = datetime.fromisoformat(ts)
             if timestamp.tzinfo is None:
-                timestamp = timestamp.replace(tzinfo=timezone.utc)
+                timestamp = timestamp.replace(tzinfo=UTC)
         else:
             timestamp = ts
             if timestamp.tzinfo is None:
-                timestamp = timestamp.replace(tzinfo=timezone.utc)
+                timestamp = timestamp.replace(tzinfo=UTC)
         return cls(
             source=data["source"],
             timestamp=timestamp,

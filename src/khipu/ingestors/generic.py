@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from khipu.model import Exchange, Session
@@ -21,7 +21,9 @@ _ROLE_MAP = {
     "gpt": "agent",
 }
 
-_HEADER_RE = re.compile(r"^(Human|User|Assistant|AI|Claude|GPT)\s*:\s*", re.IGNORECASE | re.MULTILINE)
+_HEADER_RE = re.compile(
+    r"^(Human|User|Assistant|AI|Claude|GPT)\s*:\s*", re.IGNORECASE | re.MULTILINE
+)
 
 
 def can_handle(path: Path) -> bool:
@@ -50,5 +52,5 @@ def ingest(path: Path) -> list[Session]:
             exchanges.append(Exchange(role=role, content=content))
         i += 2
 
-    ts = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    ts = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
     return [Session(source="generic", timestamp=ts, exchanges=exchanges)]

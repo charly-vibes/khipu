@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 from typer.testing import CliRunner
 
 from khipu import __version__
@@ -21,17 +20,20 @@ runner = CliRunner()
 def _session() -> Session:
     return Session(
         source="test",
-        timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         exchanges=[Exchange(role="human", content="do a thing")],
     )
 
 
 def _result() -> AnalysisResult:
     return AnalysisResult(
-        timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         session_count=1,
         sessions_skipped=0,
-        workflows=[{"name": "TDD", "goal": "test first", "steps": [], "variants": [], "session_count": 1, "session_ids": []}],
+        workflows=[{
+            "name": "TDD", "goal": "test first", "steps": [],
+            "variants": [], "session_count": 1, "session_ids": [],
+        }],
         patterns=[],
         crystallization=[],
         metadata=ResultMetadata(
@@ -58,7 +60,7 @@ class TestAnalyzeCommand:
     def test_markdown_output_default(self, tmp_path: Path):
         sessions = [_session()]
         analysis = _result()
-        with patch("khipu.cli.ingest", return_value=sessions) as mock_ingest, \
+        with patch("khipu.cli.ingest", return_value=sessions), \
              patch("khipu.cli.analyze_sessions", return_value=analysis):
             result = runner.invoke(app, ["analyze", str(tmp_path)])
         assert result.exit_code == 0

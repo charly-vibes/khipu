@@ -1,7 +1,7 @@
 """Tests for khipu public API exports."""
 import inspect
-import pytest
-from khipu import ingest, analyze, analyze_sync, emit, __version__
+
+from khipu import __version__, analyze, analyze_sync, emit, ingest
 
 
 def test_version_is_string():

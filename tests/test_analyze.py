@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import json
-import subprocess
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -14,16 +13,16 @@ from khipu.analyze import (
     AnalysisResult,
     BackendConfig,
     PromptSpec,
-    ResultMetadata,
-    analyze_sync as analyze,
     call_backend,
     discover_prompts,
     extract_json,
     load_prompt,
     topo_sort,
 )
+from khipu.analyze import (
+    analyze_sync as analyze,
+)
 from khipu.model import Exchange, Session
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -32,7 +31,7 @@ from khipu.model import Exchange, Session
 def _session(content: str = "hello") -> Session:
     return Session(
         source="test",
-        timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         exchanges=[Exchange(role="human", content=content)],
     )
 
@@ -207,9 +206,18 @@ class TestCallBackend:
 # analyze() — integration (mocked backend)
 # ---------------------------------------------------------------------------
 
-_WORKFLOWS_JSON = '[{"name": "TDD", "goal": "test first", "steps": ["write test", "run"], "variants": [], "session_count": 2, "session_ids": [0, 1]}]'
-_PATTERNS_JSON = '[{"type": "convention", "description": "always runs tests", "session_ids": [0], "confidence": 0.9}]'
-_CRYSTALLIZE_JSON = '[{"pattern_index": 0, "convergence": 0.8, "stability": 0.9, "score": 0.85, "recommendation": "crystallize", "suggested_implementation": "Add to CLAUDE.md"}]'
+_WORKFLOWS_JSON = (
+    '[{"name": "TDD", "goal": "test first", "steps": ["write test", "run"],'
+    ' "variants": [], "session_count": 2, "session_ids": [0, 1]}]'
+)
+_PATTERNS_JSON = (
+    '[{"type": "convention", "description": "always runs tests",'
+    ' "session_ids": [0], "confidence": 0.9}]'
+)
+_CRYSTALLIZE_JSON = (
+    '[{"pattern_index": 0, "convergence": 0.8, "stability": 0.9, "score": 0.85,'
+    ' "recommendation": "crystallize", "suggested_implementation": "Add to CLAUDE.md"}]'
+)
 
 
 class TestAnalyze:
@@ -288,7 +296,8 @@ class TestAnalyze:
     def test_analyze_custom_analyzer(self, tmp_path):
         custom_prompt = tmp_path / "custom.md"
         custom_prompt.write_text(
-            "---\nid: custom\nversion: \"1.0\"\ndescription: custom\ndepends_on: []\n---\n{sessions}\n"
+            "---\nid: custom\nversion: \"1.0\"\ndescription: custom\n"
+            "depends_on: []\n---\n{sessions}\n"
         )
         sessions = [_session()]
         with patch("khipu.analyze.call_backend", return_value='[{"x": 1}]'), \

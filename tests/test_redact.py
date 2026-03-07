@@ -1,18 +1,15 @@
 """Tests for khipu.redact."""
 
-import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-import pytest
-
-from khipu.model import Exchange, Outcome, Session, ToolCall
+from khipu.model import Exchange, Session, ToolCall
 from khipu.redact import redact_sessions, redact_str
 
 
 def _session(content: str) -> Session:
     return Session(
         source="test",
-        timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         exchanges=[Exchange(role="human", content=content)],
     )
 
@@ -115,7 +112,7 @@ class TestRedactSessions:
         sessions = [
             Session(
                 source="test",
-                timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+                timestamp=datetime(2026, 1, 1, tzinfo=UTC),
                 exchanges=[Exchange(role="agent", content="ok", tool_calls=[tc])],
             )
         ]

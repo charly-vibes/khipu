@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-_LARGE_FILE_THRESHOLD = 50 * 1024 * 1024  # 50 MB
-
 from khipu.model import Exchange, Session, ToolCall
+
+_LARGE_FILE_THRESHOLD = 50 * 1024 * 1024  # 50 MB
 
 EXTENSIONS = [".jsonl"]
 CONTENT_PATTERN = r'"type"\s*:\s*"(tool_use|tool_result)"'
@@ -127,5 +127,5 @@ def ingest(path: Path) -> list[Session]:
                 tc = ToolCall(tool="unknown", input=None, output=output, success=not is_error)
             exchanges.append(Exchange(role="tool", content="", tool_calls=[tc]))
 
-    timestamp = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+    timestamp = datetime.fromtimestamp(stat.st_mtime, tz=UTC)
     return [Session(source="claude-code", timestamp=timestamp, exchanges=exchanges)]

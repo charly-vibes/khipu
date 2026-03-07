@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 import sys
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from typing import Any
 
 from khipu.model import Exchange, Session, ToolCall
@@ -23,9 +23,19 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("redis_url", re.compile(r"redis://[^\s'\"]+")),
     ("mysql_url", re.compile(r"mysql://[^\s'\"]+")),
     # Private keys (PEM blocks)
-    ("private_key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----.*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----", re.DOTALL)),
+    (
+        "private_key",
+        re.compile(
+            r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
+            r".*?-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
+            re.DOTALL,
+        ),
+    ),
     # Env var assignments with secrets
-    ("env_secret", re.compile(r"(?i)(?:API_KEY|SECRET|PASSWORD|TOKEN|PASSWD|CREDENTIAL)\s*=\s*\S+")),
+    (
+        "env_secret",
+        re.compile(r"(?i)(?:API_KEY|SECRET|PASSWORD|TOKEN|PASSWD|CREDENTIAL)\s*=\s*\S+"),
+    ),
     # AWS secret access key (typically paired with access key ID)
     ("aws_secret", re.compile(r"(?i)aws_secret_access_key\s*[=:]\s*\S+")),
     # Email addresses

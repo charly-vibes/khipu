@@ -16,7 +16,8 @@ def _condense_tool_call(tc: ToolCall) -> ToolCall:
     """Keep tool name/success; drop full I/O bodies, preserve file paths."""
     input_summary: object
     if isinstance(tc.input, dict):
-        input_summary = {k: v for k, v in tc.input.items() if k in ("path", "file_path", "command", "pattern")}
+        _keys = ("path", "file_path", "command", "pattern")
+        input_summary = {k: v for k, v in tc.input.items() if k in _keys}
         if not input_summary:
             input_summary = "<condensed>"
     elif isinstance(tc.input, str) and len(tc.input) > 60:
