@@ -71,14 +71,27 @@ def analyze(
         "--only",
         help="Run only these analyzer IDs (repeatable). Default: all.",
     ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Print detailed progress: backend commands, per-step timing, and stderr on failure.",
+    ),
+    no_cache: bool = typer.Option(
+        False,
+        "--no-cache",
+        help="Disable the session and analyzer result cache.",
+    ),
 ) -> None:
     """Analyze agent traces at one or more PATHs and print a report."""
+    use_cache = not no_cache
+
     # --- Ingest ---
     sessions = []
     for path in paths:
         typer.echo(f"Ingesting {path} …", err=True)
         try:
-            sessions.extend(ingest(path, ingestor=ingestor))
+            sessions.extend(ingest(path, ingestor=ingestor, use_cache=use_cache))
         except (ValueError, OSError) as exc:
             typer.echo(f"Error: {exc}", err=True)
             raise typer.Exit(code=1) from exc
@@ -96,6 +109,8 @@ def analyze(
         model=model,
         redact=not no_redact,
         analyzers=list(only) if only else None,
+        verbose=verbose,
+        use_cache=use_cache,
     )
 
     # --- Emit ---

@@ -230,7 +230,7 @@ class BackendConfig:
     mode: str
     context_limit: int
     cli_command: str | None = None
-    cli_input: str | None = None  # "stdin" | "file"
+    cli_input: str | None = None  # "arg" | "stdin" | "file"
     model: str = "claude-sonnet-4-5"
 
 
@@ -271,10 +271,33 @@ def load_backend(backend_id: str | None) -> BackendConfig:
     raise ValueError(f"Unknown backend '{backend_id}'. Place a TOML file in .khipu/backends/")
 
 
-def _run_cli_backend(backend: BackendConfig, prompt: str, model: str | None) -> str:
+def _run_cli_backend(
+    backend: BackendConfig, prompt: str, model: str | None, verbose: bool = False
+) -> str:
     """Execute a CLI backend and return its stdout."""
-    command = backend.cli_command or "claude -p $prompt_file --output-format text"
+    command = backend.cli_command or "claude --print --output-format text --no-session-persistence"
     effective_model = model or backend.model
+
+    def _run(argv: list[str], stdin_input: str | None = None) -> str:
+        if verbose:
+            display = " ".join(argv[:6]) + (" …" if len(argv) > 6 else "")
+            print(f"  [backend] $ {display}", file=sys.stderr)
+        try:
+            result = subprocess.run(
+                argv, input=stdin_input, capture_output=True, text=True, check=True
+            )
+        except subprocess.CalledProcessError as exc:
+            if verbose and exc.stderr:
+                print(f"  [backend] stderr: {exc.stderr.strip()}", file=sys.stderr)
+            raise
+        return result.stdout
+
+    if backend.cli_input == "arg":
+        # Pass prompt as a positional argv element — avoids shell quoting entirely.
+        # `command` is split on whitespace; $model substituted before split.
+        base = command.replace("$model", effective_model)
+        argv = base.split() + [prompt]
+        return _run(argv)
 
     if backend.cli_input == "file":
         with tempfile.NamedTemporaryFile(
@@ -283,25 +306,24 @@ def _run_cli_backend(backend: BackendConfig, prompt: str, model: str | None) -> 
             tmp.write(prompt)
             prompt_file = Path(tmp.name)
         try:
-            cmd = command.replace("$prompt_file", str(prompt_file))
-            cmd = cmd.replace("$model", effective_model)
-            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
-            return result.stdout
+            base = command.replace("$prompt_file", str(prompt_file)).replace(
+                "$model", effective_model
+            )
+            return _run(base.split())
         finally:
             prompt_file.unlink(missing_ok=True)
-    else:
-        # stdin mode
-        cmd = command.replace("$model", effective_model)
-        result = subprocess.run(
-            cmd, shell=True, input=prompt, capture_output=True, text=True, check=True
-        )
-        return result.stdout
+
+    # stdin mode
+    base = command.replace("$model", effective_model)
+    return _run(base.split(), stdin_input=prompt)
 
 
-def call_backend(backend: BackendConfig, prompt: str, model: str | None = None) -> str:
+def call_backend(
+    backend: BackendConfig, prompt: str, model: str | None = None, verbose: bool = False
+) -> str:
     """Send prompt to backend and return raw text response."""
     if backend.mode == "cli":
-        return _run_cli_backend(backend, prompt, model)
+        return _run_cli_backend(backend, prompt, model, verbose=verbose)
     raise ValueError(f"Unsupported backend mode '{backend.mode}'")
 
 
@@ -326,6 +348,8 @@ def analyze_sync(
     redact: bool = True,
     sessions_skipped: int = 0,
     condensation_mode: str = "auto",
+    verbose: bool = False,
+    use_cache: bool = False,
 ) -> AnalysisResult:
     """Run the analysis pipeline on sessions (synchronous)."""
     if analyzers is None:
@@ -335,12 +359,16 @@ def analyze_sync(
 
     # Redact
     if redact:
+        if verbose:
+            print("Redacting secrets …", file=sys.stderr)
         from khipu.redact import redact_sessions
 
         sessions = redact_sessions(sessions)
 
     # Load backend
     backend_cfg = load_backend(backend)
+    if verbose:
+        print(f"Backend: {backend_cfg.id} (mode={backend_cfg.mode})", file=sys.stderr)
 
     # Condense
     from khipu.condense import condense_sessions
@@ -351,14 +379,20 @@ def analyze_sync(
         mode = "never"
     else:
         mode = "auto"
+    if verbose:
+        print(f"Condensing sessions (mode={mode}, limit={backend_cfg.context_limit}) …", file=sys.stderr)
     sessions = condense_sessions(sessions, mode=mode, context_limit=backend_cfg.context_limit)
 
     # Serialize sessions once (cached for all analyzers)
     sessions_json = json.dumps([s.to_dict() for s in sessions], indent=2)
+    if verbose:
+        print(f"Serialized sessions: {len(sessions_json):,} chars", file=sys.stderr)
 
     # Load and order prompts
     prompts = discover_prompts(analyzers)
     order = topo_sort(prompts)
+    if verbose:
+        print(f"Analyzer order: {' → '.join(order)}", file=sys.stderr)
 
     # Only run requested analyzers (deps run first but aren't in final "requested" list
     # unless explicitly requested — they still need to run to provide {variables})
@@ -398,9 +432,39 @@ def analyze_sync(
         for var, val in variables.items():
             prompt_text = prompt_text.replace(f"{{{var}}}", val)
 
+        if verbose:
+            print(
+                f"Running analyzer '{aid}' (prompt {len(prompt_text):,} chars) …",
+                file=sys.stderr,
+            )
+        step_ms = int(time.time() * 1000)
+
+        # Check analyzer cache
+        parsed: Any
+        if use_cache:
+            from khipu import cache as _cache
+
+            cached = _cache.get_analysis(prompt_text)
+            if cached is not None:
+                if verbose:
+                    print(f"  '{aid}' cache hit — skipping LLM call", file=sys.stderr)
+                results[aid] = cached
+                # Store on result object and continue to next analyzer
+                if aid == "workflows":
+                    result.workflows = cached
+                elif aid == "patterns":
+                    result.patterns = cached
+                elif aid == "crystallize":
+                    result.crystallization = cached
+                elif aid in requested_set:
+                    if result.custom is None:
+                        result.custom = {}
+                    result.custom[aid] = cached
+                continue
+
         # Call backend
         try:
-            raw = call_backend(backend_cfg, prompt_text, model)
+            raw = call_backend(backend_cfg, prompt_text, model, verbose=verbose)
         except subprocess.CalledProcessError as exc:
             print(f"WARNING: backend error for '{aid}': {exc}", file=sys.stderr)
             continue
@@ -408,17 +472,22 @@ def analyze_sync(
             print(f"WARNING: unexpected error calling backend for '{aid}': {exc}", file=sys.stderr)
             continue
 
+        if verbose:
+            elapsed = int(time.time() * 1000) - step_ms
+            print(f"  '{aid}' backend returned {len(raw):,} chars in {elapsed}ms", file=sys.stderr)
+
         # Extract JSON with one retry
-        parsed: Any
         try:
             parsed = extract_json(raw)
         except (ValueError, json.JSONDecodeError):
+            if verbose:
+                print(f"  '{aid}' response not valid JSON, retrying …", file=sys.stderr)
             retry_prompt = (
                 prompt_text + "\n\nYour previous response was not valid JSON. "
                 "Respond ONLY with the JSON array, nothing else."
             )
             try:
-                raw2 = call_backend(backend_cfg, retry_prompt, model)
+                raw2 = call_backend(backend_cfg, retry_prompt, model, verbose=verbose)
                 parsed = extract_json(raw2)
             except Exception as exc2:  # noqa: BLE001
                 print(
@@ -427,6 +496,11 @@ def analyze_sync(
                     file=sys.stderr,
                 )
                 continue
+
+        if use_cache:
+            from khipu import cache as _cache
+
+            _cache.put_analysis(prompt_text, parsed)
 
         results[aid] = parsed
 
@@ -463,6 +537,8 @@ async def analyze(
     redact: bool = True,
     sessions_skipped: int = 0,
     condensation_mode: str = "auto",
+    verbose: bool = False,
+    use_cache: bool = False,
 ) -> AnalysisResult:
     """Async wrapper around analyze_sync for use in async contexts."""
     import asyncio
@@ -478,5 +554,7 @@ async def analyze(
             redact=redact,
             sessions_skipped=sessions_skipped,
             condensation_mode=condensation_mode,
+            verbose=verbose,
+            use_cache=use_cache,
         ),
     )

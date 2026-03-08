@@ -15,6 +15,7 @@ from khipu.ingestors import claude_code, generic
 # Fixtures / helpers
 # ---------------------------------------------------------------------------
 
+
 def _write(tmp_path: Path, name: str, content: str) -> Path:
     p = tmp_path / name
     p.write_text(content)
@@ -28,6 +29,7 @@ def _jsonl_session(exchanges: list[dict]) -> str:
 # ---------------------------------------------------------------------------
 # claude_code ingestor
 # ---------------------------------------------------------------------------
+
 
 class TestClaudeCodeIngestor:
     def test_can_handle_valid_jsonl(self, tmp_path):
@@ -58,8 +60,10 @@ class TestClaudeCodeIngestor:
                 "type": "message",
                 "content": [
                     {
-                        "type": "tool_result", "tool_use_id": "t1",
-                        "content": "file.py", "is_error": False,
+                        "type": "tool_result",
+                        "tool_use_id": "t1",
+                        "content": "file.py",
+                        "is_error": False,
                     }
                 ],
             },
@@ -94,16 +98,79 @@ class TestClaudeCodeIngestor:
 
     def test_ingest_skips_invalid_json(self, tmp_path):
         content = (
-            'not-json\n'
-            + json.dumps({"role": "user", "type": "message", "content": "hi"})
-            + "\n"
+            "not-json\n" + json.dumps({"role": "user", "type": "message", "content": "hi"}) + "\n"
         )
         f = _write(tmp_path, "trace.jsonl", content)
         sessions = claude_code.ingest(f)
         assert len(sessions) == 1
 
+    def test_can_handle_new_format_tool_use_not_on_first_line(self, tmp_path):
+        lines = [
+            {"type": "progress", "data": {}},
+            {
+                "type": "assistant",
+                "message": {
+                    "role": "assistant",
+                    "content": [{"type": "tool_use", "id": "t1", "name": "Bash", "input": {}}],
+                },
+            },
+        ]
+        f = _write(tmp_path, "trace.jsonl", _jsonl_session(lines))
+        assert claude_code.can_handle(f)
+
+    def test_ingest_new_wrapper_format(self, tmp_path):
+        lines = [
+            {"type": "progress", "data": {}},
+            {
+                "type": "user",
+                "message": {"role": "user", "content": "hello"},
+            },
+            {
+                "type": "assistant",
+                "message": {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": "let me check"},
+                        {"type": "tool_use", "id": "t1", "name": "Bash", "input": {"cmd": "ls"}},
+                    ],
+                },
+            },
+            {
+                "type": "user",
+                "message": {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": "t1",
+                            "content": "file.py",
+                            "is_error": False,
+                        }
+                    ],
+                },
+            },
+        ]
+        f = _write(tmp_path, "trace.jsonl", _jsonl_session(lines))
+        sessions = claude_code.ingest(f)
+        assert len(sessions) == 1
+        s = sessions[0]
+        assert s.source == "claude-code"
+        # progress entry is skipped; first exchange is the user message
+        assert s.exchanges[0].role == "human"
+        assert s.exchanges[0].content == "hello"
+        # assistant exchange with tool_use
+        agent_ex = s.exchanges[1]
+        assert agent_ex.role == "agent"
+        assert agent_ex.tool_calls is not None
+        assert agent_ex.tool_calls[0].tool == "Bash"
+        # tool_result exchange
+        result_ex = s.exchanges[2]
+        assert result_ex.tool_calls[0].output == "file.py"
+        assert result_ex.tool_calls[0].success is True
+
     def test_large_file_warns(self, tmp_path, capsys):
         from unittest.mock import patch
+
         payload = json.dumps({"role": "user", "type": "message", "content": "hi"}) + "\n"
         f = _write(tmp_path, "trace.jsonl", payload)
         stat_result = type("S", (), {"st_size": 55 * 1024 * 1024, "st_mtime": 0})()
@@ -117,6 +184,7 @@ class TestClaudeCodeIngestor:
 # ---------------------------------------------------------------------------
 # generic ingestor
 # ---------------------------------------------------------------------------
+
 
 class TestGenericIngestor:
     def test_can_handle_md_with_role_markers(self, tmp_path):
@@ -157,6 +225,7 @@ class TestGenericIngestor:
 # ---------------------------------------------------------------------------
 # Engine
 # ---------------------------------------------------------------------------
+
 
 class TestIngestEngine:
     def test_auto_detect_claude_code(self, tmp_path):
@@ -203,6 +272,7 @@ class TestIngestEngine:
 
     def test_stdin_without_ingestor_raises(self, monkeypatch):
         import io
+
         monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(b"")))
         with pytest.raises(ValueError, match="Stdin input requires --ingestor"):
             ingest("-")
@@ -210,12 +280,14 @@ class TestIngestEngine:
     def test_stdin_as_path_object_without_ingestor_raises(self, monkeypatch):
         import io
         from pathlib import Path
+
         monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(b"")))
         with pytest.raises(ValueError, match="Stdin input requires --ingestor"):
             ingest(Path("-"))
 
     def test_stdin_unknown_ingestor_raises(self, monkeypatch):
         import io
+
         monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(b"")))
         with pytest.raises(ValueError, match="Unknown ingestor"):
             ingest("-", ingestor="bogus")
@@ -242,6 +314,7 @@ class TestIngestEngine:
         drop_in_dir.mkdir()
         (drop_in_dir / "broken.py").write_text("this is not valid python !!!@@@")
         import sys
+
         _ingest_mod = sys.modules["khipu.ingest"]
         monkeypatch.setattr(_ingest_mod, "_USER_DIRS", [drop_in_dir])
         # Discovery should not crash; broken module warned to stderr

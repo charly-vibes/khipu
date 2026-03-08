@@ -20,10 +20,76 @@ def can_handle(path: Path) -> bool:
     if path.suffix != ".jsonl":
         return False
     try:
-        first_line = path.open().readline()
-        return '"tool_use"' in first_line or '"tool_result"' in first_line
+        with path.open() as f:
+            for i, line in enumerate(f):
+                if i >= 10:
+                    break
+                if '"tool_use"' in line or '"tool_result"' in line:
+                    return True
+        return False
     except OSError:
         return False
+
+
+def _process_message(  # noqa: PLR0912
+    content_field: object,
+    role: str,
+    pending: dict[str, ToolCall],
+    exchanges: list[Exchange],
+) -> None:
+    """Append an exchange built from a message's content field (string or block list)."""
+    tool_calls: list[ToolCall] | None = None
+    msg_role = "human" if role == "user" else "agent"
+
+    if isinstance(content_field, list):
+        text_parts: list[str] = []
+        tcs: list[ToolCall] = []
+        for block in content_field:
+            btype = block.get("type", "")
+            if btype == "text":
+                text_parts.append(block.get("text", ""))
+            elif btype == "tool_use":
+                tc = ToolCall(
+                    tool=block.get("name", ""),
+                    input=block.get("input"),
+                    output=None,
+                    success=True,
+                )
+                pending[block.get("id", "")] = tc
+                tcs.append(tc)
+            elif btype == "tool_result":
+                tc_id = block.get("tool_use_id", "")
+                output = block.get("content", "")
+                if isinstance(output, list):
+                    output = " ".join(
+                        b.get("text", "") for b in output if b.get("type") == "text"
+                    )
+                is_error = block.get("is_error", False)
+                if tc_id in pending:
+                    orig = pending.pop(tc_id)
+                    tcs.append(
+                        ToolCall(
+                            tool=orig.tool,
+                            input=orig.input,
+                            output=output,
+                            success=not is_error,
+                        )
+                    )
+                else:
+                    tcs.append(
+                        ToolCall(
+                            tool="unknown",
+                            input=None,
+                            output=output,
+                            success=not is_error,
+                        )
+                    )
+        content_str = " ".join(text_parts)
+        tool_calls = tcs or None
+    else:
+        content_str = str(content_field)
+
+    exchanges.append(Exchange(role=msg_role, content=content_str, tool_calls=tool_calls))
 
 
 def ingest(path: Path) -> list[Session]:
@@ -51,58 +117,15 @@ def ingest(path: Path) -> list[Session]:
         msg_type = entry.get("type", "")
         role = entry.get("role", "")
 
-        if msg_type == "message" or role in ("user", "assistant"):
-            # Standard message
-            content_field = entry.get("content", "")
-            tool_calls: list[ToolCall] | None = None
+        if msg_type in ("assistant", "user") and "message" in entry:
+            # New Claude Code wrapper format (v2+): outer envelope with message inside
+            inner = entry["message"]
+            inner_role = inner.get("role", msg_type)
+            _process_message(inner.get("content", ""), inner_role, pending, exchanges)
 
-            if isinstance(content_field, list):
-                # Content blocks
-                text_parts: list[str] = []
-                tcs: list[ToolCall] = []
-                for block in content_field:
-                    btype = block.get("type", "")
-                    if btype == "text":
-                        text_parts.append(block.get("text", ""))
-                    elif btype == "tool_use":
-                        tc = ToolCall(
-                            tool=block.get("name", ""),
-                            input=block.get("input"),
-                            output=None,
-                            success=True,
-                        )
-                        pending[block.get("id", "")] = tc
-                        tcs.append(tc)
-                    elif btype == "tool_result":
-                        tc_id = block.get("tool_use_id", "")
-                        output = block.get("content", "")
-                        if isinstance(output, list):
-                            output = " ".join(
-                                b.get("text", "") for b in output if b.get("type") == "text"
-                            )
-                        is_error = block.get("is_error", False)
-                        if tc_id in pending:
-                            orig = pending.pop(tc_id)
-                            tcs.append(ToolCall(
-                                tool=orig.tool,
-                                input=orig.input,
-                                output=output,
-                                success=not is_error,
-                            ))
-                        else:
-                            tcs.append(ToolCall(
-                                tool="unknown",
-                                input=None,
-                                output=output,
-                                success=not is_error,
-                            ))
-                content_str = " ".join(text_parts)
-                tool_calls = tcs or None
-            else:
-                content_str = str(content_field)
-
-            msg_role = "human" if role == "user" else "agent"
-            exchanges.append(Exchange(role=msg_role, content=content_str, tool_calls=tool_calls))
+        elif msg_type == "message" or role in ("user", "assistant"):
+            # Legacy flat format
+            _process_message(entry.get("content", ""), role, pending, exchanges)
 
         elif msg_type == "tool_use":
             # Top-level tool_use (older format)

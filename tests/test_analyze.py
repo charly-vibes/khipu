@@ -28,6 +28,7 @@ from khipu.model import Exchange, Session
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _session(content: str = "hello") -> Session:
     return Session(
         source="test",
@@ -58,6 +59,7 @@ Respond with JSON: []
 # ---------------------------------------------------------------------------
 # Prompt loading
 # ---------------------------------------------------------------------------
+
 
 class TestLoadPrompt:
     def test_parses_frontmatter(self, tmp_path):
@@ -103,6 +105,7 @@ class TestDiscoverPrompts:
 # DAG / topo sort
 # ---------------------------------------------------------------------------
 
+
 class TestTopoSort:
     def _spec(self, aid: str, depends_on: list[str]) -> PromptSpec:
         return PromptSpec(id=aid, version="1.0", description="", depends_on=depends_on, body="")
@@ -143,6 +146,7 @@ class TestTopoSort:
 # JSON extraction
 # ---------------------------------------------------------------------------
 
+
 class TestExtractJson:
     def test_clean_array(self):
         assert extract_json('[{"a": 1}]') == [{"a": 1}]
@@ -175,6 +179,7 @@ class TestExtractJson:
 # ---------------------------------------------------------------------------
 # Backend
 # ---------------------------------------------------------------------------
+
 
 class TestCallBackend:
     def _cli_backend(self, input_mode: str = "stdin") -> BackendConfig:
@@ -237,8 +242,10 @@ class TestAnalyze:
 
     def test_analyze_returns_result(self):
         sessions = [_session("hello")]
-        with patch("khipu.analyze.call_backend") as mock_call, \
-             patch("khipu.analyze.load_backend") as mock_lb:
+        with (
+            patch("khipu.analyze.call_backend") as mock_call,
+            patch("khipu.analyze.load_backend") as mock_lb,
+        ):
             mock_lb.return_value = BackendConfig(
                 id="test", mode="cli", context_limit=200_000, cli_input="stdin"
             )
@@ -252,8 +259,10 @@ class TestAnalyze:
 
     def test_analyze_metadata(self):
         sessions = [_session()]
-        with patch("khipu.analyze.call_backend") as mock_call, \
-             patch("khipu.analyze.load_backend") as mock_lb:
+        with (
+            patch("khipu.analyze.call_backend") as mock_call,
+            patch("khipu.analyze.load_backend") as mock_lb,
+        ):
             mock_lb.return_value = BackendConfig(
                 id="test-backend", mode="cli", context_limit=200_000, cli_input="stdin"
             )
@@ -266,8 +275,10 @@ class TestAnalyze:
 
     def test_analyze_session_count(self):
         sessions = [_session("a"), _session("b")]
-        with patch("khipu.analyze.call_backend", return_value="[]"), \
-             patch("khipu.analyze.load_backend") as mock_lb:
+        with (
+            patch("khipu.analyze.call_backend", return_value="[]"),
+            patch("khipu.analyze.load_backend") as mock_lb,
+        ):
             mock_lb.return_value = BackendConfig(
                 id="t", mode="cli", context_limit=200_000, cli_input="stdin"
             )
@@ -278,14 +289,16 @@ class TestAnalyze:
         sessions = [_session()]
         call_count = {"n": 0}
 
-        def _flaky(backend, prompt, model=None):
+        def _flaky(backend, prompt, model=None, verbose=False):
             call_count["n"] += 1
             if call_count["n"] == 1:
                 return "not json"
             return "[]"
 
-        with patch("khipu.analyze.call_backend", side_effect=_flaky), \
-             patch("khipu.analyze.load_backend") as mock_lb:
+        with (
+            patch("khipu.analyze.call_backend", side_effect=_flaky),
+            patch("khipu.analyze.load_backend") as mock_lb,
+        ):
             mock_lb.return_value = BackendConfig(
                 id="t", mode="cli", context_limit=200_000, cli_input="stdin"
             )
@@ -296,13 +309,15 @@ class TestAnalyze:
     def test_analyze_custom_analyzer(self, tmp_path):
         custom_prompt = tmp_path / "custom.md"
         custom_prompt.write_text(
-            "---\nid: custom\nversion: \"1.0\"\ndescription: custom\n"
+            '---\nid: custom\nversion: "1.0"\ndescription: custom\n'
             "depends_on: []\n---\n{sessions}\n"
         )
         sessions = [_session()]
-        with patch("khipu.analyze.call_backend", return_value='[{"x": 1}]'), \
-             patch("khipu.analyze.load_backend") as mock_lb, \
-             patch("khipu.analyze._USER_PROMPT_DIRS", [tmp_path]):
+        with (
+            patch("khipu.analyze.call_backend", return_value='[{"x": 1}]'),
+            patch("khipu.analyze.load_backend") as mock_lb,
+            patch("khipu.analyze._USER_PROMPT_DIRS", [tmp_path]),
+        ):
             mock_lb.return_value = BackendConfig(
                 id="t", mode="cli", context_limit=200_000, cli_input="stdin"
             )

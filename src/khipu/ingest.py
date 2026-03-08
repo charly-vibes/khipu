@@ -129,6 +129,7 @@ def ingest(
     *,
     ingestor: str | None = None,
     safe: bool = False,
+    use_cache: bool = False,
 ) -> list[Session]:
     """Normalize trace files into Sessions.
 
@@ -169,22 +170,43 @@ def ingest(
             raise ValueError(f"Unknown ingestor '{ingestor}'. Available: {', '.join(id_map)}")
         forced_mod = cast(_IngestorModule, id_map[ingestor])
         if p.is_dir():
-            return _ingest_dir(p, lambda f: forced_mod)
-        return forced_mod.ingest(p)
+            return _ingest_dir(p, lambda f: forced_mod, use_cache=use_cache)
+        return _ingest_file(p, forced_mod, use_cache=use_cache)
 
     # Auto-detect
     if p.is_dir():
-        return _ingest_dir(p, lambda f: _pick_ingestor(f, modules))
+        return _ingest_dir(p, lambda f: _pick_ingestor(f, modules), use_cache=use_cache)
 
     detected = _pick_ingestor(p, modules)
     if detected is None:
         raise ValueError(f"No ingestor found for '{p}'. Try --ingestor <name>.")
-    return cast(_IngestorModule, detected).ingest(p)
+    return _ingest_file(p, cast(_IngestorModule, detected), use_cache=use_cache)
+
+
+def _ingest_file(path: Path, mod: ModuleType, *, use_cache: bool = False) -> list[Session]:
+    """Ingest a single file, consulting the session cache when enabled."""
+    if use_cache:
+        from khipu import cache
+
+        cached = cache.get_sessions(path)
+        if cached is not None:
+            return [Session.from_dict(d) for d in cached]
+
+    sessions = cast(_IngestorModule, mod).ingest(path)
+
+    if use_cache:
+        from khipu import cache
+
+        cache.put_sessions(path, [s.to_dict() for s in sessions])
+
+    return sessions
 
 
 def _ingest_dir(
     directory: Path,
     pick_fn: object,
+    *,
+    use_cache: bool = False,
 ) -> list[Session]:
     """Recursively ingest all parseable files in *directory*."""
     from collections.abc import Callable
@@ -201,7 +223,7 @@ def _ingest_dir(
         if mod is None:
             continue
         try:
-            sessions.extend(mod.ingest(file))
+            sessions.extend(_ingest_file(file, mod, use_cache=use_cache))
         except Exception as exc:  # noqa: BLE001
             print(f"WARNING: failed to ingest {file}: {exc}", file=sys.stderr)
     return sessions
