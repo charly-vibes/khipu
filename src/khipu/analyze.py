@@ -381,8 +381,7 @@ def analyze_sync(
         mode = "auto"
     if verbose:
         print(
-            f"Condensing sessions (mode={mode},"
-            f" limit={backend_cfg.context_limit}) …",
+            f"Condensing sessions (mode={mode}, limit={backend_cfg.context_limit}) …",
             file=sys.stderr,
         )
     sessions = condense_sessions(sessions, mode=mode, context_limit=backend_cfg.context_limit)

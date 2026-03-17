@@ -61,9 +61,7 @@ def _process_message(  # noqa: PLR0912
                 tc_id = block.get("tool_use_id", "")
                 output = block.get("content", "")
                 if isinstance(output, list):
-                    output = " ".join(
-                        b.get("text", "") for b in output if b.get("type") == "text"
-                    )
+                    output = " ".join(b.get("text", "") for b in output if b.get("type") == "text")
                 is_error = block.get("is_error", False)
                 if tc_id in pending:
                     orig = pending.pop(tc_id)

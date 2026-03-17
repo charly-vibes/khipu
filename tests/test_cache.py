@@ -67,6 +67,7 @@ class TestSessionCache:
         # Simulate file change by updating mtime
         import os
         import time
+
         time.sleep(0.01)
         os.utime(p, None)
         with patch("khipu.cache._cache_root", return_value=cache_root):
@@ -116,6 +117,7 @@ class TestIngestCache:
 
         # Second call: ingestor should NOT be invoked
         import khipu.ingestors.claude_code as cc
+
         with (
             patch("khipu.cache._cache_root", return_value=cache_root),
             patch.object(cc, "ingest", wraps=cc.ingest) as mock_ingest,
@@ -132,6 +134,7 @@ class TestIngestCache:
             ingest(p, use_cache=True)
 
         import khipu.ingestors.claude_code as cc
+
         with (
             patch("khipu.cache._cache_root", return_value=cache_root),
             patch.object(cc, "ingest", wraps=cc.ingest) as mock_ingest,

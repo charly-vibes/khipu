@@ -191,4 +191,3 @@ context before starting research or creating tickets.
 ## Development Conventions
 
 - **Run tests with**: `uv run pytest` (not `.venv/bin/pytest` or `python -m pytest`)
-
