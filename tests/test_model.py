@@ -62,9 +62,7 @@ class TestSession:
         assert Session.from_dict(s.to_dict()) == s
 
     def test_roundtrip_with_outcome(self):
-        s = make_session(
-            outcome=Outcome(success=True, artifacts_produced=["x.py"], errors=[])
-        )
+        s = make_session(outcome=Outcome(success=True, artifacts_produced=["x.py"], errors=[]))
         assert Session.from_dict(s.to_dict()) == s
 
     def test_timestamp_isoformat(self):

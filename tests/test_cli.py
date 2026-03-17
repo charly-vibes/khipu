@@ -30,10 +30,16 @@ def _result() -> AnalysisResult:
         timestamp=datetime(2026, 1, 1, tzinfo=UTC),
         session_count=1,
         sessions_skipped=0,
-        workflows=[{
-            "name": "TDD", "goal": "test first", "steps": [],
-            "variants": [], "session_count": 1, "session_ids": [],
-        }],
+        workflows=[
+            {
+                "name": "TDD",
+                "goal": "test first",
+                "steps": [],
+                "variants": [],
+                "session_count": 1,
+                "session_ids": [],
+            }
+        ],
         patterns=[],
         crystallization=[],
         metadata=ResultMetadata(
@@ -60,8 +66,10 @@ class TestAnalyzeCommand:
     def test_markdown_output_default(self, tmp_path: Path):
         sessions = [_session()]
         analysis = _result()
-        with patch("khipu.cli.ingest", return_value=sessions), \
-             patch("khipu.cli.analyze_sessions", return_value=analysis):
+        with (
+            patch("khipu.cli.ingest", return_value=sessions),
+            patch("khipu.cli.analyze_sessions", return_value=analysis),
+        ):
             result = runner.invoke(app, ["analyze", str(tmp_path)])
         assert result.exit_code == 0
         assert "TDD" in result.output
@@ -69,8 +77,10 @@ class TestAnalyzeCommand:
     def test_json_output(self, tmp_path: Path):
         sessions = [_session()]
         analysis = _result()
-        with patch("khipu.cli.ingest", return_value=sessions), \
-             patch("khipu.cli.analyze_sessions", return_value=analysis):
+        with (
+            patch("khipu.cli.ingest", return_value=sessions),
+            patch("khipu.cli.analyze_sessions", return_value=analysis),
+        ):
             result = runner.invoke(app, ["analyze", str(tmp_path), "--emit", "json"])
         assert result.exit_code == 0
         # Progress lines go to stderr but CliRunner mixes them; find the JSON block
@@ -87,8 +97,10 @@ class TestAnalyzeCommand:
     def test_ingestor_flag_passed_through(self, tmp_path: Path):
         sessions = [_session()]
         analysis = _result()
-        with patch("khipu.cli.ingest", return_value=sessions) as mock_ingest, \
-             patch("khipu.cli.analyze_sessions", return_value=analysis):
+        with (
+            patch("khipu.cli.ingest", return_value=sessions) as mock_ingest,
+            patch("khipu.cli.analyze_sessions", return_value=analysis),
+        ):
             runner.invoke(app, ["analyze", str(tmp_path), "--ingestor", "claude_code"])
             mock_ingest.assert_called_once()
             _, kwargs = mock_ingest.call_args
@@ -97,16 +109,20 @@ class TestAnalyzeCommand:
     def test_no_redact_flag(self, tmp_path: Path):
         sessions = [_session()]
         analysis = _result()
-        with patch("khipu.cli.ingest", return_value=sessions), \
-             patch("khipu.cli.analyze_sessions", return_value=analysis) as mock_analyze:
+        with (
+            patch("khipu.cli.ingest", return_value=sessions),
+            patch("khipu.cli.analyze_sessions", return_value=analysis) as mock_analyze,
+        ):
             runner.invoke(app, ["analyze", str(tmp_path), "--no-redact"])
             _, kwargs = mock_analyze.call_args
             assert kwargs.get("redact") is False
 
     def test_unknown_emit_exits_nonzero(self, tmp_path: Path):
         sessions = [_session()]
-        with patch("khipu.cli.ingest", return_value=sessions), \
-             patch("khipu.cli.analyze_sessions", return_value=_result()):
+        with (
+            patch("khipu.cli.ingest", return_value=sessions),
+            patch("khipu.cli.analyze_sessions", return_value=_result()),
+        ):
             result = runner.invoke(app, ["analyze", str(tmp_path), "--emit", "xml"])
         assert result.exit_code != 0
 
@@ -122,8 +138,10 @@ class TestAnalyzeCommand:
         dir2.mkdir()
         sessions = [_session()]
         analysis = _result()
-        with patch("khipu.cli.ingest", return_value=sessions) as mock_ingest, \
-             patch("khipu.cli.analyze_sessions", return_value=analysis):
+        with (
+            patch("khipu.cli.ingest", return_value=sessions) as mock_ingest,
+            patch("khipu.cli.analyze_sessions", return_value=analysis),
+        ):
             result = runner.invoke(app, ["analyze", str(dir1), str(dir2)])
         assert result.exit_code == 0
         assert mock_ingest.call_count == 2
@@ -131,8 +149,10 @@ class TestAnalyzeCommand:
     def test_only_flag_filters_analyzers(self, tmp_path: Path):
         sessions = [_session()]
         analysis = _result()
-        with patch("khipu.cli.ingest", return_value=sessions), \
-             patch("khipu.cli.analyze_sessions", return_value=analysis) as mock_analyze:
+        with (
+            patch("khipu.cli.ingest", return_value=sessions),
+            patch("khipu.cli.analyze_sessions", return_value=analysis) as mock_analyze,
+        ):
             result = runner.invoke(app, ["analyze", str(tmp_path), "--only", "workflows"])
         assert result.exit_code == 0
         _, kwargs = mock_analyze.call_args

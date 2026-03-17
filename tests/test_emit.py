@@ -86,27 +86,48 @@ class TestEmitMarkdown:
         assert "3" in output
 
     def test_contains_workflows_section(self):
-        result = _result(workflows=[{
-            "name": "TDD", "goal": "test first", "steps": [],
-            "variants": [], "session_count": 2, "session_ids": [],
-        }])
+        result = _result(
+            workflows=[
+                {
+                    "name": "TDD",
+                    "goal": "test first",
+                    "steps": [],
+                    "variants": [],
+                    "session_count": 2,
+                    "session_ids": [],
+                }
+            ]
+        )
         output = emit(result, template="markdown")
         assert "TDD" in output
 
     def test_contains_patterns_section(self):
-        result = _result(patterns=[{
-            "type": "convention", "description": "runs tests",
-            "session_ids": [], "confidence": 0.9,
-        }])
+        result = _result(
+            patterns=[
+                {
+                    "type": "convention",
+                    "description": "runs tests",
+                    "session_ids": [],
+                    "confidence": 0.9,
+                }
+            ]
+        )
         output = emit(result, template="markdown")
         assert "runs tests" in output
 
     def test_contains_crystallization_section(self):
-        result = _result(crystallization=[{
-            "pattern_index": 0, "score": 0.85, "recommendation": "crystallize",
-            "suggested_implementation": "Add to CLAUDE.md",
-            "convergence": 0.8, "stability": 0.9,
-        }])
+        result = _result(
+            crystallization=[
+                {
+                    "pattern_index": 0,
+                    "score": 0.85,
+                    "recommendation": "crystallize",
+                    "suggested_implementation": "Add to CLAUDE.md",
+                    "convergence": 0.8,
+                    "stability": 0.9,
+                }
+            ]
+        )
         output = emit(result, template="markdown")
         assert "crystallize" in output.lower() or "0.85" in output
 

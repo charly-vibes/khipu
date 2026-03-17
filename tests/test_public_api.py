@@ -1,4 +1,5 @@
 """Tests for khipu public API exports."""
+
 import inspect
 
 from khipu import __version__, analyze, analyze_sync, emit, ingest

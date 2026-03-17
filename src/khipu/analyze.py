@@ -380,7 +380,11 @@ def analyze_sync(
     else:
         mode = "auto"
     if verbose:
-        print(f"Condensing sessions (mode={mode}, limit={backend_cfg.context_limit}) …", file=sys.stderr)
+        print(
+            f"Condensing sessions (mode={mode},"
+            f" limit={backend_cfg.context_limit}) …",
+            file=sys.stderr,
+        )
     sessions = condense_sessions(sessions, mode=mode, context_limit=backend_cfg.context_limit)
 
     # Serialize sessions once (cached for all analyzers)

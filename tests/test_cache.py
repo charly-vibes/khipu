@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from khipu import cache
 from khipu.ingest import ingest
 from khipu.model import Exchange, Session
-from datetime import datetime, timezone
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -22,17 +19,20 @@ from datetime import datetime, timezone
 def _make_session() -> Session:
     return Session(
         source="claude-code",
-        timestamp=datetime.now(tz=timezone.utc),
+        timestamp=datetime.now(tz=UTC),
         exchanges=[Exchange(role="human", content="hello")],
     )
 
 
 def _write_jsonl(tmp_path: Path, name: str = "trace.jsonl") -> Path:
     p = tmp_path / name
-    p.write_text(
-        json.dumps({"type": "tool_use", "id": "t1", "name": "Bash", "input": {}}) + "\n"
-        + json.dumps({"type": "tool_result", "tool_use_id": "t1", "content": "ok", "is_error": False}) + "\n"
+    line1 = json.dumps(
+        {"type": "tool_use", "id": "t1", "name": "Bash", "input": {}},
     )
+    line2 = json.dumps(
+        {"type": "tool_result", "tool_use_id": "t1", "content": "ok", "is_error": False},
+    )
+    p.write_text(line1 + "\n" + line2 + "\n")
     return p
 
 
@@ -65,7 +65,8 @@ class TestSessionCache:
         with patch("khipu.cache._cache_root", return_value=cache_root):
             cache.put_sessions(p, sessions)
         # Simulate file change by updating mtime
-        import os, time
+        import os
+        import time
         time.sleep(0.01)
         os.utime(p, None)
         with patch("khipu.cache._cache_root", return_value=cache_root):
@@ -115,10 +116,12 @@ class TestIngestCache:
 
         # Second call: ingestor should NOT be invoked
         import khipu.ingestors.claude_code as cc
-        with patch("khipu.cache._cache_root", return_value=cache_root):
-            with patch.object(cc, "ingest", wraps=cc.ingest) as mock_ingest:
-                sessions2 = ingest(p, use_cache=True)
-                mock_ingest.assert_not_called()
+        with (
+            patch("khipu.cache._cache_root", return_value=cache_root),
+            patch.object(cc, "ingest", wraps=cc.ingest) as mock_ingest,
+        ):
+            sessions2 = ingest(p, use_cache=True)
+            mock_ingest.assert_not_called()
         assert len(sessions2) == 1
 
     def test_no_cache_flag_bypasses_cache(self, tmp_path):
@@ -129,10 +132,12 @@ class TestIngestCache:
             ingest(p, use_cache=True)
 
         import khipu.ingestors.claude_code as cc
-        with patch("khipu.cache._cache_root", return_value=cache_root):
-            with patch.object(cc, "ingest", wraps=cc.ingest) as mock_ingest:
-                ingest(p, use_cache=False)
-                mock_ingest.assert_called_once()
+        with (
+            patch("khipu.cache._cache_root", return_value=cache_root),
+            patch.object(cc, "ingest", wraps=cc.ingest) as mock_ingest,
+        ):
+            ingest(p, use_cache=False)
+            mock_ingest.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +147,7 @@ class TestIngestCache:
 
 _FIXED_SESSION = Session(
     source="claude-code",
-    timestamp=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    timestamp=datetime(2026, 1, 1, tzinfo=UTC),
     exchanges=[Exchange(role="human", content="hello")],
 )
 
