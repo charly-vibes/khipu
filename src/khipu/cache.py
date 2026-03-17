@@ -30,7 +30,7 @@ def get_sessions(path: Path) -> list[dict[str, Any]] | None:
     key = _session_key(path)
     cache_file = _cache_root() / "sessions" / f"{key}.json"
     try:
-        return json.loads(cache_file.read_text())  # type: ignore[return-value]
+        return json.loads(cache_file.read_text())  # type: ignore[no-any-return]
     except (OSError, json.JSONDecodeError):
         return None
 

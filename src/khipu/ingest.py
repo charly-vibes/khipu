@@ -183,7 +183,7 @@ def ingest(
     return _ingest_file(p, cast(_IngestorModule, detected), use_cache=use_cache)
 
 
-def _ingest_file(path: Path, mod: ModuleType, *, use_cache: bool = False) -> list[Session]:
+def _ingest_file(path: Path, mod: _IngestorModule, *, use_cache: bool = False) -> list[Session]:
     """Ingest a single file, consulting the session cache when enabled."""
     if use_cache:
         from khipu import cache
@@ -192,7 +192,7 @@ def _ingest_file(path: Path, mod: ModuleType, *, use_cache: bool = False) -> lis
         if cached is not None:
             return [Session.from_dict(d) for d in cached]
 
-    sessions = cast(_IngestorModule, mod).ingest(path)
+    sessions = mod.ingest(path)
 
     if use_cache:
         from khipu import cache
