@@ -1,0 +1,4 @@
+pre-push:
+  commands:
+    tests:
+      run: uv run pytest

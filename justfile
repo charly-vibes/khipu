@@ -1,5 +1,10 @@
 set dotenv-load
 
+# Install dependencies and git hooks
+setup:
+    uv sync --all-extras
+    bd hooks install
+
 # Install dependencies
 sync:
     uv sync --all-extras
