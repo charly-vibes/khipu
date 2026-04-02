@@ -210,3 +210,6 @@ __marimo__/
 .dolt/
 *.db
 .claude/
+
+# Beads / Dolt files (added by bd init)
+.beads-credential-key

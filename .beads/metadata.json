@@ -2,5 +2,6 @@
   "database": "dolt",
   "backend": "dolt",
   "dolt_mode": "server",
-  "dolt_database": "khipu"
+  "dolt_database": "khipu",
+  "project_id": "fa6c8024-4b6b-460b-9322-ae9c57ad17a7"
 }
