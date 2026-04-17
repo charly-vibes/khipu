@@ -131,6 +131,6 @@ pip install khipu
 
 ## Source
 
-- Repository: https://github.com/charly/khipu
+- Repository: https://github.com/charly-vibes/khipu
 - Language: Python ≥ 3.11
 - Dependencies: typer, jinja2, httpx, mcp
