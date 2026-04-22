@@ -2,8 +2,8 @@ plugins = []
 
 [project]
 name = "khipu"
-version = "2026.2.1"
+version = "2026.4.7"
 description = ""
-tool_commit = "f190810"
+tool_commit = "bf66bc0"
 
 [llm]
