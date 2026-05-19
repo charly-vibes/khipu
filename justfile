@@ -3,7 +3,17 @@ set dotenv-load
 # Install dependencies and git hooks
 setup:
     uv sync --all-extras
+    lefthook install
     bd hooks install
+
+# Install git hooks
+hooks:
+    lefthook install
+    bd hooks install
+
+# Run pre-commit hook manually
+hooks-run:
+    lefthook run pre-commit
 
 # Install dependencies
 sync:
