@@ -116,3 +116,8 @@ bd close <id>         # Complete work
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
+
+## Git & Workflow Discipline
+
+- **Never use `git add -A`** — always stage specific files with explicit paths
+- **Per-ticket pipeline**: always follow `TDD → ro5u → fix → commit → next ticket`
