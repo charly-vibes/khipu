@@ -1,0 +1,6 @@
+id = "auto-mode-uses-raw-sessions-when-they-fit"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.1.0"

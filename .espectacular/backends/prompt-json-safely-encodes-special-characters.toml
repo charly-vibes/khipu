@@ -1,0 +1,6 @@
+id = "prompt-json-safely-encodes-special-characters"
+description = ""
+archetype = "PF"
+status = "active"
+superseded_by = ""
+authored_with = "0.1.0"
