@@ -23,6 +23,10 @@ sync:
 test:
     uv run pytest
 
+# Validate spec-test correspondence (requires ah)
+validate:
+    ah check
+
 # Show coverage report (run 'just test' first)
 coverage:
     uv run coverage report
